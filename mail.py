@@ -16,7 +16,8 @@ import socks
 
 class EmailUtil(object):
     def __init__(self, host: str, port: int, passwd: str, from_addr: str,
-                 tls: bool = True, proxy_url: str = None, debug: bool = True):
+                 tls: bool = True, proxy_url: str = None, debug: bool = True,
+                 proxy_auth: typing.Optional[typing.Tuple] = None):
 
         self.smtp_host = host
         self.smtp_port = port
@@ -30,6 +31,7 @@ class EmailUtil(object):
 
         if proxy_url:
             self.proxy = proxy_url
+            self.proxy_auth = proxy_auth
             smtplib.SMTP._get_socket = self._smtplib_get_socket
         self.debug_level = 1 if debug else 0
 
@@ -42,8 +44,8 @@ class EmailUtil(object):
             proxy_type=socks.PROXY_TYPES[proxy_url.scheme.upper()],
             proxy_addr=proxy_url.hostname,
             proxy_port=proxy_url.port,
-            proxy_username=proxy_url.username if proxy_url.username else None,
-            proxy_password=proxy_url.password if proxy_url.password else None,
+            proxy_username=self.proxy_auth[0] if self.proxy_auth else None,
+            proxy_password=self.proxy_auth[1] if self.proxy_auth else None,
         )
 
     def _format_addr(self, s):
@@ -53,7 +55,7 @@ class EmailUtil(object):
     def _send_email(self, msg):
         if self.smtp_port == 465:
             server = smtplib.SMTP_SSL(self.smtp_host, self.smtp_port)
-        elif self.smtp_port == 587:
+        elif self.smtp_port in (587, 25):
             server = smtplib.SMTP(self.smtp_host, self.smtp_port)
             if self.tls:
                 server.starttls()
